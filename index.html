@@ -351,11 +351,11 @@
           row.className = "row folder-row";
 
           const caret = document.createElement("span");
-          caret.className = "caret";
-          caret.textContent = "▾";
+          caret.className = "caret collapsed";
+          caret.textContent = "▸";
 
           const icon = document.createElement("span");
-          icon.textContent = "📂";
+          icon.textContent = "📁";
 
           const name = document.createElement("span");
           name.className = "name";
@@ -368,6 +368,7 @@
           row.append(caret, icon, name, meta);
 
           const childUl = renderTree(item.__children);
+          childUl.classList.add("hidden");
           row.onclick = () => {
             const hidden = childUl.classList.toggle("hidden");
             caret.classList.toggle("collapsed", hidden);
