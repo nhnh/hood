@@ -67,8 +67,6 @@
       border-bottom: 1px solid var(--border);
       background: linear-gradient(180deg, #fff, #fbfcff);
     }
-    .breadcrumb { font-size: 13px; color: var(--muted); margin-right: auto; }
-    .breadcrumb strong { color: var(--text); }
     .search { flex: 1 1 220px; min-width: 180px; position: relative; }
     .search input {
       width: 100%;
@@ -91,18 +89,6 @@
       transform: translateY(-50%);
       color: var(--muted);
     }
-    button {
-      border: 0;
-      border-radius: 10px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      color: #fff;
-      background: var(--primary);
-      transition: .18s ease;
-    }
-    button:hover { background: var(--primary-dark); transform: translateY(-1px); }
     .tree-body { padding: 12px 20px 22px; }
     ul { list-style: none; margin: 0; padding-left: 20px; }
     ul.root-tree { padding-left: 0; }
@@ -153,12 +139,10 @@
 
     <section class="card">
       <div class="toolbar">
-        <div class="breadcrumb">Home / <strong>Main</strong></div>
         <label class="search">
           <span>🔎</span>
           <input id="search" type="search" placeholder="Cari fail atau folder..." autocomplete="off">
         </label>
-        <button id="refresh" type="button">↻ Refresh</button>
       </div>
       <div class="tree-body">
         <div id="tree-container" class="state">Memuatkan senarai fail...</div>
@@ -423,7 +407,6 @@
     }
 
     document.getElementById("search").addEventListener("input", render);
-    document.getElementById("refresh").addEventListener("click", fetchRepoTree);
     fetchRepoTree();
   </script>
 </body>
