@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          String       @id @default(uuid())
+  email       String       @unique
+  name        String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+  credentials Credential[]
+  challenges  Challenge[]
+
+  @@map("users")
+}
+
+model Credential {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  credentialId String   @unique @map("credential_id")
+  publicKey    Bytes
+  counter      Int      @default(0)
+  transports   String?
+  deviceLabel  String?  @map("device_label")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("credentials")
+}
+
+model Challenge {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  challenge String
+  type      String
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("challenges")
+}
