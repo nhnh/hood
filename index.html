@@ -3,224 +3,429 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HoOD : House of Official Documents</title>
+  <title>HoOD: House of Official Documents</title>
   <style>
+    :root {
+      --bg: #eef2ff;
+      --surface: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --accent: #06b6d4;
+      --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      max-width: 800px;
-      margin: 40px auto;
-      padding: 0 20px;
-      color: #24292e;
-      background-color: #f6f8fa;
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Inter, system-ui, -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 12% 0%, rgba(79, 70, 229, .18), transparent 38%),
+        radial-gradient(circle at 88% 8%, rgba(6, 182, 212, .16), transparent 35%),
+        var(--bg);
+      padding: 32px 18px 48px;
     }
-    .container {
-      background: #ffffff;
-      border: 1px solid #d0d7de;
-      border-radius: 6px;
-      padding: 24px;
+    .shell { max-width: 880px; margin: 0 auto; }
+    .hero {
+      position: relative;
+      overflow: hidden;
+      border-radius: 22px;
+      padding: 30px 32px;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary) 55%, var(--accent));
+      box-shadow: var(--shadow);
     }
-    h1 {
-      font-size: 20px;
-      margin-top: 0;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #d0d7de;
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -60px;
+      top: -80px;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, .12);
     }
-    ul {
-      list-style-type: none;
-      padding-left: 20px;
-      margin: 6px 0;
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 26px;
+      font-weight: 800;
+      background: rgba(255, 255, 255, .16);
+      border: 1px solid rgba(255, 255, 255, .28);
     }
-    ul.root-tree {
-      padding-left: 0;
+    h1 { margin: 0; font-size: 25px; letter-spacing: -.02em; }
+    .tagline { margin: 4px 0 0; opacity: .88; font-size: 14px; }
+    .hero-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+    .chip {
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      background: rgba(255, 255, 255, .15);
+      border: 1px solid rgba(255, 255, 255, .22);
     }
-    li {
-      margin: 6px 0;
-      line-height: 1.5;
+    .card {
+      margin-top: 22px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
-    .folder-toggle {
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #fff, #fbfcff);
+    }
+    .breadcrumb { font-size: 13px; color: var(--muted); margin-right: auto; }
+    .breadcrumb strong { color: var(--text); }
+    .search { flex: 1 1 220px; min-width: 180px; position: relative; }
+    .search input {
+      width: 100%;
+      padding: 10px 12px 10px 36px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      outline: none;
+      font-size: 14px;
+      background: #fff;
+      color: var(--text);
+    }
+    .search input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, .12);
+    }
+    .search span {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 14px;
       cursor: pointer;
       font-weight: 600;
-      color: #24292e;
-      user-select: none;
-    }
-    .folder-toggle:hover {
-      color: #0969da;
-    }
-    a.file-link {
-      text-decoration: none;
-      color: #0969da;
-    }
-    a.file-link:hover {
-      text-decoration: underline;
-    }
-    .hidden {
-      display: none;
-    }
-    .loading {
-      color: #57606a;
-      font-style: italic;
-    }
-    .summary {
-      color: #57606a;
       font-size: 13px;
-      margin-bottom: 12px;
+      color: #fff;
+      background: var(--primary);
+      transition: .18s ease;
+    }
+    button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .tree-body { padding: 12px 20px 22px; }
+    ul { list-style: none; margin: 0; padding-left: 20px; }
+    ul.root-tree { padding-left: 0; }
+    li { margin: 3px 0; }
+    .row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: background .15s ease;
+    }
+    .row:hover { background: #f8fafc; }
+    .folder-row { cursor: pointer; font-weight: 600; }
+    .folder-row:hover { background: #eef2ff; }
+    .caret {
+      display: inline-block;
+      width: 14px;
+      color: var(--primary);
+      transition: transform .15s ease;
+    }
+    .caret.collapsed { transform: rotate(-90deg); }
+    .name { flex: 1; word-break: break-word; }
+    .meta { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+    .file-link { color: var(--primary-dark); text-decoration: none; }
+    .file-link:hover { text-decoration: underline; }
+    .hidden { display: none; }
+    .state { padding: 32px 20px; text-align: center; color: var(--muted); }
+    .state.error { color: #b91c1c; }
+    .footer { margin-top: 16px; text-align: center; font-size: 12px; color: var(--muted); }
+    @media (max-width: 560px) {
+      .hero { padding: 24px; }
+      h1 { font-size: 21px; }
+      .tree-body { padding: 10px 12px 18px; }
+      .meta { display: none; }
     }
   </style>
 </head>
 <body>
+  <div class="shell">
+    <header class="hero">
+      <div class="brand">
+        <div class="logo">H</div>
+        <div>
+          <h1>HoOD: House of Official Documents</h1>
+          <p class="tagline">Senarai fail dan dokumen rasmi dalam repo <strong>nhnh/hood</strong>.</p>
+        </div>
+      </div>
+      <div class="hero-stats">
+        <span class="chip">📁 Folder sasaran: Main</span>
+        <span class="chip" id="chip-files">📄 0 fail</span>
+        <span class="chip" id="chip-folders">🗂️ 0 subfolder</span>
+        <span class="chip" id="chip-branch">🌿 main</span>
+      </div>
+    </header>
 
-<div class="container">
-  <h1>📂 Directory Tree: Main</h1>
-  <div id="tree-summary" class="summary"></div>
-  <div id="tree-container" class="loading">Memuatkan senarai fail...</div>
-</div>
+    <section class="card">
+      <div class="toolbar">
+        <div class="breadcrumb">Home / <strong>Main</strong></div>
+        <label class="search">
+          <span>🔎</span>
+          <input id="search" type="search" placeholder="Cari fail atau folder..." autocomplete="off">
+        </label>
+        <button id="refresh" type="button">↻ Refresh</button>
+      </div>
+      <div class="tree-body">
+        <div id="tree-container" class="state">Memuatkan senarai fail...</div>
+      </div>
+    </section>
 
-<script>
-  // === TETAPAN ===
-  const USERNAME      = "nhnh";
-  const REPO          = "hood";       // Nama repository sahaja, bukan URL penuh
-  const BRANCH        = "main";
-  const TARGET_FOLDER = "Main";       // Senaraikan kandungan folder ini sahaja
-  // ================
+    <p class="footer">Dijana terus dari GitHub API • kemas kini automatik bila repo berubah</p>
+  </div>
 
-  function encodePath(path) {
-    return path.split("/").map(encodeURIComponent).join("/");
-  }
+  <script>
+    const USERNAME = "nhnh";
+    const REPO = "hood";
+    const BRANCH = "main";
+    const TARGET_FOLDER = "Main";
 
-  function fileUrl(path) {
-    return `https://github.com/${USERNAME}/${REPO}/blob/${BRANCH}/${encodePath(path)}`;
-  }
+    let originalTree = {};
+    let originalCounts = { fileCount: 0, folderCount: 0 };
 
-  async function fetchRepoTree() {
-    const container = document.getElementById("tree-container");
-    const summary = document.getElementById("tree-summary");
-    const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO}/git/trees/${BRANCH}?recursive=1`;
+    function encodePath(path) {
+      return path.split("/").map(encodeURIComponent).join("/");
+    }
 
-    try {
-      const response = await fetch(apiUrl);
-      if (response.status === 403) {
-        throw new Error("Had kadar GitHub API tercapai. Sila cuba sebentar lagi.");
+    function fileUrl(path) {
+      return `https://github.com/${USERNAME}/${REPO}/blob/${BRANCH}/${encodePath(path)}`;
+    }
+
+    function fileIcon(name) {
+      const ext = (name.split(".").pop() || "").toLowerCase();
+      const icons = {
+        pdf: "📕", md: "📝", txt: "📄", doc: "📘", docx: "📘",
+        xls: "📗", xlsx: "📗", csv: "📊", json: "🧩", xml: "🧾",
+        js: "🟨", ts: "🟦", py: "🐍", html: "🌐", css: "🎨",
+        png: "🖼️", jpg: "🖼️", jpeg: "🖼️", gif: "🖼️", svg: "🖼️",
+        zip: "🗜️", rar: "🗜️", "7z": "🗜️"
+      };
+      return icons[ext] || "📄";
+    }
+
+    function formatSize(bytes) {
+      if (bytes === undefined || bytes === null) return "";
+      if (bytes < 1024) return `${bytes} B`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    async function fetchRepoTree() {
+      const container = document.getElementById("tree-container");
+      container.className = "state";
+      container.textContent = "Memuatkan senarai fail...";
+
+      try {
+        const response = await fetch(
+          `https://api.github.com/repos/${USERNAME}/${REPO}/git/trees/${BRANCH}?recursive=1`
+        );
+        if (response.status === 403) throw new Error("Had kadar GitHub API tercapai. Sila cuba sebentar lagi.");
+        if (!response.ok) throw new Error(`GitHub API returned HTTP ${response.status}.`);
+
+        const data = await response.json();
+        if (!Array.isArray(data.tree)) throw new Error("Format data GitHub API tidak dijangka.");
+
+        const built = buildHierarchy(data.tree);
+        originalTree = built.tree;
+        originalCounts = { fileCount: built.fileCount, folderCount: built.folderCount };
+        render();
+      } catch (error) {
+        container.className = "state error";
+        container.textContent = `Ralat: ${error.message}`;
       }
-      if (!response.ok) {
-        throw new Error(`Gagal mendapatkan data GitHub API (HTTP ${response.status}).`);
+    }
+
+    function buildHierarchy(items) {
+      const root = {};
+      const folderPaths = new Set();
+      let fileCount = 0;
+
+      items.forEach(item => {
+        if (item.path === "index.html" || item.path.startsWith(".")) return;
+        if (item.path === TARGET_FOLDER) return;
+        if (TARGET_FOLDER && !item.path.startsWith(TARGET_FOLDER + "/")) return;
+
+        const cleanPath = TARGET_FOLDER ? item.path.slice(TARGET_FOLDER.length + 1) : item.path;
+        if (!cleanPath) return;
+
+        const parts = cleanPath.split("/");
+        let current = root;
+        let currentPath = TARGET_FOLDER;
+
+        parts.forEach((part, index) => {
+          currentPath += "/" + part;
+          const isLast = index === parts.length - 1;
+          const isFile = isLast && item.type === "blob";
+
+          if (!current[part] || (!isLast && current[part].__type === "file")) {
+            current[part] = {
+              __type: isFile ? "file" : "folder",
+              __path: isFile ? item.path : currentPath,
+              __size: isFile ? item.size : undefined,
+              __children: {}
+            };
+          }
+
+          if (!isFile) folderPaths.add(currentPath);
+          if (isFile) fileCount++;
+          current = current[part].__children;
+        });
+      });
+
+      return { tree: root, fileCount, folderCount: folderPaths.size };
+    }
+
+    function filterTree(query) {
+      const q = query.trim().toLowerCase();
+      if (!q) return { tree: originalTree, ...originalCounts };
+
+      const result = {};
+      const folders = new Set();
+      let files = 0;
+
+      function walk(source, destination, folderPath) {
+        Object.keys(source).forEach(key => {
+          const item = source[key];
+          if (item.__type === "folder") {
+            const child = {};
+            const nextPath = folderPath + "/" + key;
+            walk(item.__children, child, nextPath);
+            if (key.toLowerCase().includes(q) || Object.keys(child).length > 0) {
+              destination[key] = { ...item, __children: child };
+              folders.add(nextPath);
+            }
+          } else if (key.toLowerCase().includes(q) || item.__path.toLowerCase().includes(q)) {
+            destination[key] = { ...item };
+            files++;
+          }
+        });
       }
 
-      const data = await response.json();
-      if (!Array.isArray(data.tree)) throw new Error("Format data GitHub API tidak dijangka.");
+      walk(originalTree, result, TARGET_FOLDER);
+      return { tree: result, fileCount: files, folderCount: folders.size };
+    }
 
-      const { tree, fileCount, folderCount } = buildHierarchy(data.tree);
+    function render() {
+      const query = document.getElementById("search").value;
+      const { tree, fileCount, folderCount } = filterTree(query);
+      const container = document.getElementById("tree-container");
 
-      container.classList.remove("loading");
+      document.getElementById("chip-files").textContent = `📄 ${fileCount} fail`;
+      document.getElementById("chip-folders").textContent = `🗂️ ${folderCount} subfolder`;
+      document.getElementById("chip-branch").textContent = `🌿 ${BRANCH}`;
+
+      container.className = "";
       container.innerHTML = "";
-      summary.textContent = `${fileCount} fail, ${folderCount} subfolder dalam "${TARGET_FOLDER}"`;
 
       if (Object.keys(tree).length === 0) {
-        container.textContent = `Tiada fail atau subfolder ditemui dalam "${TARGET_FOLDER}".`;
+        container.className = "state";
+        container.textContent = query
+          ? `Tiada padanan untuk "${query}".`
+          : `Tiada fail atau subfolder dalam "${TARGET_FOLDER}".`;
         return;
       }
 
       container.appendChild(renderTree(tree, true));
-    } catch (error) {
-      container.classList.remove("loading");
-      summary.textContent = "";
-      container.innerHTML = `<p style="color: red;">Ralat: ${error.message}</p>`;
     }
-  }
 
-  // Tukar senarai path GitHub kepada struktur folder/file bersarang.
-  function buildHierarchy(items) {
-    const root = {};
-    let fileCount = 0;
-    const folderPaths = new Set();
+    function renderTree(node, isRoot = false) {
+      const ul = document.createElement("ul");
+      if (isRoot) ul.classList.add("root-tree");
 
-    items.forEach(item => {
-      // Abaikan index.html, fail tersembunyi, dan path di luar TARGET_FOLDER.
-      if (item.path === "index.html" || item.path.startsWith(".")) return;
-      if (item.path === TARGET_FOLDER) return;
-      if (TARGET_FOLDER && !item.path.startsWith(TARGET_FOLDER + "/")) return;
+      const keys = Object.keys(node).sort((a, b) => {
+        const typeA = node[a].__type;
+        const typeB = node[b].__type;
+        if (typeA !== typeB) return typeA === "folder" ? -1 : 1;
+        return a.localeCompare(b, undefined, { sensitivity: "base" });
+      });
 
-      const cleanPath = TARGET_FOLDER
-        ? item.path.slice(TARGET_FOLDER.length + 1)
-        : item.path;
-      if (!cleanPath) return;
+      keys.forEach(key => {
+        const item = node[key];
+        const li = document.createElement("li");
 
-      const parts = cleanPath.split("/");
-      let current = root;
-      let currentPath = TARGET_FOLDER;
+        if (item.__type === "folder") {
+          const row = document.createElement("div");
+          row.className = "row folder-row";
 
-      parts.forEach((part, index) => {
-        currentPath += "/" + part;
-        const isLast = index === parts.length - 1;
-        const isFile = isLast && item.type === "blob";
+          const caret = document.createElement("span");
+          caret.className = "caret";
+          caret.textContent = "▾";
 
-        if (!current[part] || (!isLast && current[part].__type === "file")) {
-          current[part] = {
-            __type: isFile ? "file" : "folder",
-            __path: isFile ? item.path : currentPath,
-            __children: {}
+          const icon = document.createElement("span");
+          icon.textContent = "📂";
+
+          const name = document.createElement("span");
+          name.className = "name";
+          name.textContent = key;
+
+          const meta = document.createElement("span");
+          meta.className = "meta";
+          meta.textContent = "folder";
+
+          row.append(caret, icon, name, meta);
+
+          const childUl = renderTree(item.__children);
+          row.onclick = () => {
+            const hidden = childUl.classList.toggle("hidden");
+            caret.classList.toggle("collapsed", hidden);
+            icon.textContent = hidden ? "📁" : "📂";
           };
+
+          li.append(row, childUl);
+        } else {
+          const row = document.createElement("div");
+          row.className = "row";
+
+          const icon = document.createElement("span");
+          icon.textContent = fileIcon(key);
+
+          const link = document.createElement("a");
+          link.className = "file-link name";
+          link.href = fileUrl(item.__path);
+          link.textContent = key;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+
+          const meta = document.createElement("span");
+          meta.className = "meta";
+          meta.textContent = formatSize(item.__size);
+
+          row.append(icon, link, meta);
+          li.appendChild(row);
         }
 
-        if (!isFile) folderPaths.add(currentPath);
-        if (isFile) fileCount++;
-
-        current = current[part].__children;
+        ul.appendChild(li);
       });
-    });
 
-    return { tree: root, fileCount, folderCount: folderPaths.size };
-  }
+      return ul;
+    }
 
-  // Bina elemen <ul>/<li> secara rekursif supaya semua subfolder dipaparkan.
-  function renderTree(node, isRoot = false) {
-    const ul = document.createElement("ul");
-    if (isRoot) ul.classList.add("root-tree");
-
-    const keys = Object.keys(node).sort((a, b) => {
-      const typeA = node[a].__type;
-      const typeB = node[b].__type;
-      if (typeA !== typeB) return typeA === "folder" ? -1 : 1;
-      return a.localeCompare(b, undefined, { sensitivity: "base" });
-    });
-
-    keys.forEach(key => {
-      const item = node[key];
-      const li = document.createElement("li");
-
-      if (item.__type === "folder") {
-        const span = document.createElement("span");
-        span.className = "folder-toggle";
-        span.textContent = `📂 ${key}`;
-        span.setAttribute("aria-expanded", "true");
-
-        const childUl = renderTree(item.__children);
-
-        span.onclick = () => {
-          const hidden = childUl.classList.toggle("hidden");
-          span.textContent = hidden ? `📁 ${key}` : `📂 ${key}`;
-          span.setAttribute("aria-expanded", String(!hidden));
-        };
-
-        li.appendChild(span);
-        li.appendChild(childUl);
-      } else {
-        const a = document.createElement("a");
-        a.className = "file-link";
-        a.href = fileUrl(item.__path);
-        a.textContent = `📄 ${key}`;
-        a.target = "_blank";
-        a.rel = "noopener noreferrer";
-        li.appendChild(a);
-      }
-
-      ul.appendChild(li);
-    });
-
-    return ul;
-  }
-
-  fetchRepoTree();
-</script>
-
+    document.getElementById("search").addEventListener("input", render);
+    document.getElementById("refresh").addEventListener("click", fetchRepoTree);
+    fetchRepoTree();
+  </script>
 </body>
 </html>
