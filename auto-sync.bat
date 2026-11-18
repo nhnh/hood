@@ -3,105 +3,87 @@ setlocal EnableExtensions EnableDelayedExpansion
 cd /d "%~dp0"
 
 REM ============================================================
-REM  HoOD: House of Official Documents - Auto Sync
-REM  Pantau folder "Main", commit dan push ke GitHub bila berubah.
+REM  HoOD: House of Official Documents - Sync Main (sekali jalan)
+REM  Klik .bat ini -> detect perubahan dalam folder "Main",
+REM  commit dan push ke GitHub, kemudian tamat.
 REM
-REM  Sebelum jalankan, tetapkan token GitHub dalam environment:
-REM    set HOOD_GH_TOKEN=ghp_xxxx...        (terminal semasa)
-REM    setx HOOD_GH_TOKEN ghp_xxxx...      (kekal, terminal baru)
+REM  Sebelum klik, tetapkan token GitHub dalam environment:
+REM    setx HOOD_GH_TOKEN ghp_xxxx...      (kekal, untuk double-click)
 REM ============================================================
 
 set "BRANCH=main"
 set "WATCH=Main"
-set "INTERVAL=5"
-set "SNAP=%TEMP%\hood_main_snapshot.txt"
-set "PREV=%TEMP%\hood_main_previous.txt"
-set "PENDING=%TEMP%\hood_main_pending.txt"
+set "PENDING=%TEMP%\hood_main_pending_push.txt"
 
-title HoOD Auto Sync
+title HoOD Sync Main
 
 echo.
-echo   HoOD: House of Official Documents - Auto Sync
-echo   Folder pantau : %CD%\%WATCH%
-echo   Interval      : %INTERVAL% saat
-echo   Tekan CTRL+C untuk berhenti.
+echo   HoOD: House of Official Documents
+echo   Sync sekali: folder %WATCH% ke GitHub
 echo.
 
 if not defined HOOD_GH_TOKEN (
   echo [ERROR] HOOD_GH_TOKEN belum ditetapkan.
-  echo Contoh:
-  echo   set HOOD_GH_TOKEN=ghp_xxxx...
-  exit /b 1
+  echo Jalankan sekali sebelum klik .bat:
+  echo   setx HOOD_GH_TOKEN ghp_xxxx...
+  echo kemudian tutup dan buka semula terminal / File Explorer.
+  goto :end
 )
 
 if not exist "%WATCH%\" (
   echo [ERROR] Folder "%WATCH%" tidak wujud.
-  exit /b 1
+  goto :end
 )
 
 git rev-parse --is-inside-work-tree >nul 2>&1
 if errorlevel 1 (
   echo [ERROR] Folder ini bukan git repository.
-  exit /b 1
+  goto :end
 )
 
-call :snapshot > "%SNAP%"
-copy /y "%SNAP%" "%PREV%" >nul
-echo [%date% %time%] Pemantauan bermula.
-
-:loop
+REM Jika push sebelum ini gagal, cuba semula dulu.
 if exist "%PENDING%" (
-  echo [%date% %time%] Cuba push semula perubahan tertangguh...
+  echo Push tertangguh dikesan. Cuba push semula...
   call :push
   if not errorlevel 1 (
     del "%PENDING%" >nul
-    copy /y "%SNAP%" "%PREV%" >nul
-    echo [%date% %time%] Push berjaya.
+    echo Push tertangguh berjaya.
   ) else (
-    echo [%date% %time%] Push masih gagal.
+    echo Push tertangguh masih gagal. Token/network perlu disemak.
   )
+  echo.
 )
 
-timeout /t %INTERVAL% /nobreak >nul
-
-call :snapshot > "%SNAP%"
-fc /b "%PREV%" "%SNAP%" >nul
+git add -A -- "%WATCH%"
+git diff --cached --quiet
 if errorlevel 1 (
-  echo [%date% %time%] Perubahan dikesan dalam folder %WATCH%.
+  echo Perubahan dikesan dalam folder %WATCH%:
+  git diff --cached --stat -- "%WATCH%"
 
-  git add -A -- "%WATCH%"
-  git diff --cached --quiet
+  for /f "delims=" %%a in ('powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd_HHmmss'"') do set "STAMP=%%a"
+
+  git commit -m "Auto-update Main !STAMP!"
   if errorlevel 1 (
-    for /f "delims=" %%a in ('powershell -NoProfile -Command "Get-Date -Format 'yyyy-MM-dd_HHmmss'"') do set "STAMP=%%a"
-    git commit -m "Auto-update Main !STAMP!"
-    if errorlevel 1 (
-      echo [%date% %time%] Commit gagal.
-    ) else (
-      echo [%date% %time%] Commit berjaya.
-      call :push
-      if errorlevel 1 (
-        echo ok > "%PENDING%"
-        echo [%date% %time%] Push gagal. Akan cuba semula automatik.
-      ) else (
-        copy /y "%SNAP%" "%PREV%" >nul
-        echo [%date% %time%] Push berjaya.
-      )
-    )
+    echo [ERROR] Commit gagal.
   ) else (
-    copy /y "%SNAP%" "%PREV%" >nul
-    echo [%date% %time%] Tiada perubahan kandungan untuk commit.
+    echo Commit berjaya.
+    call :push
+    if errorlevel 1 (
+      echo ok > "%PENDING%"
+      echo [ERROR] Push gagal. Klik .bat ini semula kemudian untuk cuba lagi.
+    ) else (
+      if exist "%PENDING%" del "%PENDING%" >nul
+      echo Push berjaya.
+    )
   )
+) else (
+  echo Tiada perubahan dalam folder %WATCH%. Tiada commit diperlukan.
 )
-goto :loop
 
-:snapshot
-powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$root=(Resolve-Path -LiteralPath '%WATCH%').Path; " ^
-  "Get-ChildItem -LiteralPath $root -Recurse -Force -File | " ^
-  "Sort-Object FullName | " ^
-  "ForEach-Object { $rel=$_.FullName.Substring($root.Length).TrimStart('\','/'); " ^
-  "$hash=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash; " ^
-  "'{0}|{1}|{2}' -f $rel,$_.Length,$hash }"
+:end
+echo.
+echo Selesai.
+pause
 exit /b
 
 :push
