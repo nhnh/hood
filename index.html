@@ -50,14 +50,6 @@
     }
     .brand { display: flex; align-items: center; }
     h1 { margin: 0; font-size: 25px; letter-spacing: -.02em; }
-    .hero-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
-    .chip {
-      padding: 7px 12px;
-      border-radius: 999px;
-      font-size: 12.5px;
-      background: rgba(255, 255, 255, .15);
-      border: 1px solid rgba(255, 255, 255, .22);
-    }
     .card {
       margin-top: 22px;
       background: var(--surface);
@@ -136,8 +128,9 @@
     .caret.collapsed { transform: rotate(-90deg); }
     .name { flex: 1; word-break: break-word; }
     .meta { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
-    .file-link { color: var(--primary-dark); text-decoration: none; }
+    .file-link { color: var(--primary-dark); text-decoration: none; cursor: pointer; }
     .file-link:hover { text-decoration: underline; }
+    .file-link.downloading { opacity: .6; cursor: wait; }
     .hidden { display: none; }
     .state { padding: 32px 20px; text-align: center; color: var(--muted); }
     .state.error { color: #b91c1c; }
@@ -156,12 +149,6 @@
       <div class="brand">
         <h1>HoOD: House of Official Documents</h1>
       </div>
-      <div class="hero-stats">
-        <span class="chip">📁 Folder sasaran: Main</span>
-        <span class="chip" id="chip-files">📄 0 fail</span>
-        <span class="chip" id="chip-folders">🗂️ 0 subfolder</span>
-        <span class="chip" id="chip-branch">🌿 main</span>
-      </div>
     </header>
 
     <section class="card">
@@ -178,7 +165,7 @@
       </div>
     </section>
 
-    <p class="footer">Dijana terus dari GitHub API • kemas kini automatik bila repo berubah</p>
+    <p class="footer">Klik fail untuk muat turun terus • dijana dari GitHub API</p>
   </div>
 
   <script>
@@ -194,8 +181,8 @@
       return path.split("/").map(encodeURIComponent).join("/");
     }
 
-    function fileUrl(path) {
-      return `https://github.com/${USERNAME}/${REPO}/blob/${BRANCH}/${encodePath(path)}`;
+    function fileRawUrl(path) {
+      return `https://raw.githubusercontent.com/${USERNAME}/${REPO}/${BRANCH}/${encodePath(path)}`;
     }
 
     function fileIcon(name) {
@@ -314,12 +301,8 @@
 
     function render() {
       const query = document.getElementById("search").value;
-      const { tree, fileCount, folderCount } = filterTree(query);
+      const { tree } = filterTree(query);
       const container = document.getElementById("tree-container");
-
-      document.getElementById("chip-files").textContent = `📄 ${fileCount} fail`;
-      document.getElementById("chip-folders").textContent = `🗂️ ${folderCount} subfolder`;
-      document.getElementById("chip-branch").textContent = `🌿 ${BRANCH}`;
 
       container.className = "";
       container.innerHTML = "";
@@ -333,6 +316,35 @@
       }
 
       container.appendChild(renderTree(tree, true));
+    }
+
+    async function downloadFile(path, linkEl) {
+      const name = path.split("/").pop() || "download";
+      const prevText = linkEl ? linkEl.textContent : "";
+      if (linkEl) {
+        linkEl.classList.add("downloading");
+        linkEl.textContent = `⬇️ ${name}`;
+      }
+      try {
+        const response = await fetch(fileRawUrl(path));
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } catch (error) {
+        alert(`Gagal memuat turun ${name}: ${error.message}`);
+      } finally {
+        if (linkEl) {
+          linkEl.classList.remove("downloading");
+          linkEl.textContent = prevText || name;
+        }
+      }
     }
 
     function renderTree(node, isRoot = false) {
@@ -388,10 +400,13 @@
 
           const link = document.createElement("a");
           link.className = "file-link name";
-          link.href = fileUrl(item.__path);
+          link.href = fileRawUrl(item.__path);
           link.textContent = key;
-          link.target = "_blank";
-          link.rel = "noopener noreferrer";
+          link.title = "Klik untuk muat turun";
+          link.onclick = event => {
+            event.preventDefault();
+            downloadFile(item.__path, link);
+          };
 
           const meta = document.createElement("span");
           meta.className = "meta";
