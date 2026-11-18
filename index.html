@@ -299,7 +299,7 @@
         return;
       }
 
-      container.appendChild(renderTree(tree, true));
+      container.appendChild(renderTree(tree, true, Boolean(query)));
     }
 
     async function downloadFile(path, linkEl) {
@@ -331,7 +331,7 @@
       }
     }
 
-    function renderTree(node, isRoot = false) {
+    function renderTree(node, isRoot = false, expandAll = false) {
       const ul = document.createElement("ul");
       if (isRoot) ul.classList.add("root-tree");
 
@@ -351,11 +351,11 @@
           row.className = "row folder-row";
 
           const caret = document.createElement("span");
-          caret.className = "caret collapsed";
-          caret.textContent = "▸";
+          caret.className = expandAll ? "caret" : "caret collapsed";
+          caret.textContent = expandAll ? "▾" : "▸";
 
           const icon = document.createElement("span");
-          icon.textContent = "📁";
+          icon.textContent = expandAll ? "📂" : "📁";
 
           const name = document.createElement("span");
           name.className = "name";
@@ -367,8 +367,8 @@
 
           row.append(caret, icon, name, meta);
 
-          const childUl = renderTree(item.__children);
-          childUl.classList.add("hidden");
+          const childUl = renderTree(item.__children, false, expandAll);
+          if (!expandAll) childUl.classList.add("hidden");
           row.onclick = () => {
             const hidden = childUl.classList.toggle("hidden");
             caret.classList.toggle("collapsed", hidden);
