@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Senarai Fail & Folder</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #24292e;
+      background-color: #f6f8fa;
+    }
+    .container {
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 20px;
+      margin-top: 0;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #d0d7de;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+    ul.root-tree {
+      padding-left: 0;
+    }
+    li {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+    .folder-toggle {
+      cursor: pointer;
+      font-weight: 600;
+      color: #24292e;
+      user-select: none;
+    }
+    .folder-toggle:hover {
+      color: #0969da;
+    }
+    a.file-link {
+      text-decoration: none;
+      color: #0969da;
+    }
+    a.file-link:hover {
+      text-decoration: underline;
+    }
+    .hidden {
+      display: none;
+    }
+    .loading {
+      color: #57606a;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📂 Directory Tree</h1>
+  <div id="tree-container" class="loading">Memuatkan senarai fail...</div>
+</div>
+
+<script>
+  // === TETAPAN (TUKAR MAKLUMAT ANDA DI SINI) ===
+  const USERNAME = "NAMA_PENGGUNA_GITHUB"; // Contoh: "ahmad123"
+  const REPO     = "NAMA_REPOSITORY";      // Contoh: "koleksi-nota"
+  const BRANCH   = "main";                 // Biasanya "main" atau "master"
+  const TARGET_FOLDER = "";                // Biarkan kosong "" untuk semua, atau isi "files" jika mahu papar folder tertentu sahaja
+  // ============================================
+
+  async function fetchRepoTree() {
+    const container = document.getElementById("tree-container");
+    const apiUrl = `https://github.com{USERNAME}/${REPO}/git/trees/${BRANCH}?recursive=1`;
+
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error("Gagal mendapatkan data daripada GitHub API.");
+      
+      const data = await response.json();
+      const treeData = buildHierarchy(data.tree);
+      
+      container.classList.remove("loading");
+      container.innerHTML = "";
+      container.appendChild(renderTree(treeData, true));
+    } catch (error) {
+      container.innerHTML = `<p style="color: red;">Ralat: ${error.message}. Sila pastikan nama pengguna, repository, dan branch adalah betul serta repository berstatus Public.</p>`;
+    }
+  }
+
+  // Susun senarai laluan (path) kepada struktur objek bersarang (nested object)
+  function buildHierarchy(items) {
+    const root = {};
+
+    items.forEach(item => {
+      // Abaikan fail index.html sendiri dan fail tersembunyi (.gitignore dll)
+      if (item.path === "index.html" || item.path.startsWith(".")) return;
+
+      // Tapis jika TARGET_FOLDER ditetapkan
+      if (TARGET_FOLDER && !item.path.startsWith(TARGET_FOLDER + "/")) return;
+
+      const cleanPath = TARGET_FOLDER ? item.path.replace(TARGET_FOLDER + "/", "") : item.path;
+      const parts = cleanPath.split("/");
+      let current = root;
+
+      parts.forEach((part, index) => {
+        if (!current[part]) {
+          current[part] = {
+            __type: (index === parts.length - 1 && item.type === "blob") ? "file" : "folder",
+            __path: item.path,
+            __children: {}
+          };
+        }
+        current = current[part].__children;
+      });
+    });
+
+    return root;
+  }
+
+  // Bina elemen HTML <ul> dan <li> secara rekursif
+  function renderTree(node, isRoot = false) {
+    const ul = document.createElement("ul");
+    if (isRoot) ul.classList.add("root-tree");
+
+    // Susun folder dahulu, diikuti fail mengikut abjad
+    const keys = Object.keys(node).sort((a, b) => {
+      const typeA = node[a].__type;
+      const typeB = node[b].__type;
+      if (typeA !== typeB) return typeA === "folder" ? -1 : 1;
+      return a.localeCompare(b);
+    });
+
+    keys.forEach(key => {
+      const item = node[key];
+      const li = document.createElement("li");
+
+      if (item.__type === "folder") {
+        const span = document.createElement("span");
+        span.className = "folder-toggle";
+        span.textContent = `📁 ${key}`;
+        
+        const childUl = renderTree(item.__children);
+        
+        // Klik pada folder untuk buka/tutup (collapse/expand)
+        span.onclick = () => {
+          childUl.classList.toggle("hidden");
+          span.textContent = childUl.classList.contains("hidden") ? `📁 ${key}` : `📂 ${key}`;
+        };
+
+        li.appendChild(span);
+        li.appendChild(childUl);
+      } else {
+        const a = document.createElement("a");
+        a.className = "file-link";
+        a.href = encodeURI(item.__path);
+        a.textContent = `📄 ${key}`;
+        a.target = "_blank"; // Buka fail dalam tab baharu
+        li.appendChild(a);
+      }
+
+      ul.appendChild(li);
+    });
+
+    return ul;
+  }
+
+  fetchRepoTree();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Senarai Fail & Folder</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      color: #24292e;
+      background-color: #f6f8fa;
+    }
+    .container {
+      background: #ffffff;
+      border: 1px solid #d0d7de;
+      border-radius: 6px;
+      padding: 24px;
+    }
+    h1 {
+      font-size: 20px;
+      margin-top: 0;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #d0d7de;
+    }
+    ul {
+      list-style-type: none;
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+    ul.root-tree {
+      padding-left: 0;
+    }
+    li {
+      margin: 6px 0;
+      line-height: 1.5;
+    }
+    .folder-toggle {
+      cursor: pointer;
+      font-weight: 600;
+      color: #24292e;
+      user-select: none;
+    }
+    .folder-toggle:hover {
+      color: #0969da;
+    }
+    a.file-link {
+      text-decoration: none;
+      color: #0969da;
+    }
+    a.file-link:hover {
+      text-decoration: underline;
+    }
+    .hidden {
+      display: none;
+    }
+    .loading {
+      color: #57606a;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>📂 Directory Tree</h1>
+  <div id="tree-container" class="loading">Memuatkan senarai fail...</div>
+</div>
+
+<script>
+  // === TETAPAN (TUKAR MAKLUMAT ANDA DI SINI) ===
+  const USERNAME = "NAMA_PENGGUNA_GITHUB"; // Contoh: "ahmad123"
+  const REPO     = "NAMA_REPOSITORY";      // Contoh: "koleksi-nota"
+  const BRANCH   = "main";                 // Biasanya "main" atau "master"
+  const TARGET_FOLDER = "";                // Biarkan kosong "" untuk semua, atau isi "files" jika mahu papar folder tertentu sahaja
+  // ============================================
+
+  async function fetchRepoTree() {
+    const container = document.getElementById("tree-container");
+    const apiUrl = `https://github.com{USERNAME}/${REPO}/git/trees/${BRANCH}?recursive=1`;
+
+    try {
+      const response = await fetch(apiUrl);
+      if (!response.ok) throw new Error("Gagal mendapatkan data daripada GitHub API.");
+      
+      const data = await response.json();
+      const treeData = buildHierarchy(data.tree);
+      
+      container.classList.remove("loading");
+      container.innerHTML = "";
+      container.appendChild(renderTree(treeData, true));
+    } catch (error) {
+      container.innerHTML = `<p style="color: red;">Ralat: ${error.message}. Sila pastikan nama pengguna, repository, dan branch adalah betul serta repository berstatus Public.</p>`;
+    }
+  }
+
+  // Susun senarai laluan (path) kepada struktur objek bersarang (nested object)
+  function buildHierarchy(items) {
+    const root = {};
+
+    items.forEach(item => {
+      // Abaikan fail index.html sendiri dan fail tersembunyi (.gitignore dll)
+      if (item.path === "index.html" || item.path.startsWith(".")) return;
+
+      // Tapis jika TARGET_FOLDER ditetapkan
+      if (TARGET_FOLDER && !item.path.startsWith(TARGET_FOLDER + "/")) return;
+
+      const cleanPath = TARGET_FOLDER ? item.path.replace(TARGET_FOLDER + "/", "") : item.path;
+      const parts = cleanPath.split("/");
+      let current = root;
+
+      parts.forEach((part, index) => {
+        if (!current[part]) {
+          current[part] = {
+            __type: (index === parts.length - 1 && item.type === "blob") ? "file" : "folder",
+            __path: item.path,
+            __children: {}
+          };
+        }
+        current = current[part].__children;
+      });
+    });
+
+    return root;
+  }
+
+  // Bina elemen HTML <ul> dan <li> secara rekursif
+  function renderTree(node, isRoot = false) {
+    const ul = document.createElement("ul");
+    if (isRoot) ul.classList.add("root-tree");
+
+    // Susun folder dahulu, diikuti fail mengikut abjad
+    const keys = Object.keys(node).sort((a, b) => {
+      const typeA = node[a].__type;
+      const typeB = node[b].__type;
+      if (typeA !== typeB) return typeA === "folder" ? -1 : 1;
+      return a.localeCompare(b);
+    });
+
+    keys.forEach(key => {
+      const item = node[key];
+      const li = document.createElement("li");
+
+      if (item.__type === "folder") {
+        const span = document.createElement("span");
+        span.className = "folder-toggle";
+        span.textContent = `📁 ${key}`;
+        
+        const childUl = renderTree(item.__children);
+        
+        // Klik pada folder untuk buka/tutup (collapse/expand)
+        span.onclick = () => {
+          childUl.classList.toggle("hidden");
+          span.textContent = childUl.classList.contains("hidden") ? `📁 ${key}` : `📂 ${key}`;
+        };
+
+        li.appendChild(span);
+        li.appendChild(childUl);
+      } else {
+        const a = document.createElement("a");
+        a.className = "file-link";
+        a.href = encodeURI(item.__path);
+        a.textContent = `📄 ${key}`;
+        a.target = "_blank"; // Buka fail dalam tab baharu
+        li.appendChild(a);
+      }
+
+      ul.appendChild(li);
+    });
+
+    return ul;
+  }
+
+  fetchRepoTree();
+</script>
+
+</body>
+</html>
