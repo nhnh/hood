@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Directory Tree - nhnh/hood</title>
+  <title>HoOD : House of Official Documents</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -60,79 +60,118 @@
       color: #57606a;
       font-style: italic;
     }
+    .summary {
+      color: #57606a;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>📂 Directory Tree</h1>
+  <h1>📂 Directory Tree: Main</h1>
+  <div id="tree-summary" class="summary"></div>
   <div id="tree-container" class="loading">Memuatkan senarai fail...</div>
 </div>
 
 <script>
-  const USERNAME = "nhnh";
-  const REPO     = "hood";
-  const BRANCH   = "main";
-  const TARGET_FOLDER = ""; // Biarkan kosong untuk papar semua, atau tukar ke "Main" jika mahu isi dalam folder Main sahaja
+  // === TETAPAN ===
+  const USERNAME      = "nhnh";
+  const REPO          = "hood";       // Nama repository sahaja, bukan URL penuh
+  const BRANCH        = "main";
+  const TARGET_FOLDER = "Main";       // Senaraikan kandungan folder ini sahaja
+  // ================
+
+  function encodePath(path) {
+    return path.split("/").map(encodeURIComponent).join("/");
+  }
+
+  function fileUrl(path) {
+    return `https://github.com/${USERNAME}/${REPO}/blob/${BRANCH}/${encodePath(path)}`;
+  }
 
   async function fetchRepoTree() {
     const container = document.getElementById("tree-container");
-    const apiUrl = `https://github.com{USERNAME}/${REPO}/git/trees/${BRANCH}?recursive=1`;
+    const summary = document.getElementById("tree-summary");
+    const apiUrl = `https://api.github.com/repos/${USERNAME}/${REPO}/git/trees/${BRANCH}?recursive=1`;
 
     try {
-      const response = await fetch(apiUrl, {
-        headers: {
-          "Accept": "application/vnd.github.v3+json"
-        }
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`HTTP ${response.status}: ${errorData.message || response.statusText}`);
+      const response = await fetch(apiUrl);
+      if (response.status === 403) {
+        throw new Error("Had kadar GitHub API tercapai. Sila cuba sebentar lagi.");
       }
-      
+      if (!response.ok) {
+        throw new Error(`Gagal mendapatkan data GitHub API (HTTP ${response.status}).`);
+      }
+
       const data = await response.json();
-      const treeData = buildHierarchy(data.tree);
-      
+      if (!Array.isArray(data.tree)) throw new Error("Format data GitHub API tidak dijangka.");
+
+      const { tree, fileCount, folderCount } = buildHierarchy(data.tree);
+
       container.classList.remove("loading");
       container.innerHTML = "";
-      container.appendChild(renderTree(treeData, true));
+      summary.textContent = `${fileCount} fail, ${folderCount} subfolder dalam "${TARGET_FOLDER}"`;
+
+      if (Object.keys(tree).length === 0) {
+        container.textContent = `Tiada fail atau subfolder ditemui dalam "${TARGET_FOLDER}".`;
+        return;
+      }
+
+      container.appendChild(renderTree(tree, true));
     } catch (error) {
       container.classList.remove("loading");
-      container.innerHTML = `
-        <div style="color: #cf222e; background: #ffebe9; padding: 12px; border-radius: 6px; border: 1px solid rgba(255,129,130,0.4);">
-          <strong>Ralat Sambungan:</strong> ${error.message}<br><br>
-          <small>Pastikan anda membuka halaman ini melalui pautan rasmi <strong>https://github.io</strong> dan sambungan ke <em>api.github.com</em> tidak disekat oleh rangkaian atau pelayar anda.</small>
-        </div>`;
+      summary.textContent = "";
+      container.innerHTML = `<p style="color: red;">Ralat: ${error.message}</p>`;
     }
   }
 
+  // Tukar senarai path GitHub kepada struktur folder/file bersarang.
   function buildHierarchy(items) {
     const root = {};
+    let fileCount = 0;
+    const folderPaths = new Set();
 
     items.forEach(item => {
+      // Abaikan index.html, fail tersembunyi, dan path di luar TARGET_FOLDER.
       if (item.path === "index.html" || item.path.startsWith(".")) return;
+      if (item.path === TARGET_FOLDER) return;
       if (TARGET_FOLDER && !item.path.startsWith(TARGET_FOLDER + "/")) return;
 
-      const cleanPath = TARGET_FOLDER ? item.path.replace(TARGET_FOLDER + "/", "") : item.path;
+      const cleanPath = TARGET_FOLDER
+        ? item.path.slice(TARGET_FOLDER.length + 1)
+        : item.path;
+      if (!cleanPath) return;
+
       const parts = cleanPath.split("/");
       let current = root;
+      let currentPath = TARGET_FOLDER;
 
       parts.forEach((part, index) => {
-        if (!current[part]) {
+        currentPath += "/" + part;
+        const isLast = index === parts.length - 1;
+        const isFile = isLast && item.type === "blob";
+
+        if (!current[part] || (!isLast && current[part].__type === "file")) {
           current[part] = {
-            __type: (index === parts.length - 1 && item.type === "blob") ? "file" : "folder",
-            __path: item.path,
+            __type: isFile ? "file" : "folder",
+            __path: isFile ? item.path : currentPath,
             __children: {}
           };
         }
+
+        if (!isFile) folderPaths.add(currentPath);
+        if (isFile) fileCount++;
+
         current = current[part].__children;
       });
     });
 
-    return root;
+    return { tree: root, fileCount, folderCount: folderPaths.size };
   }
 
+  // Bina elemen <ul>/<li> secara rekursif supaya semua subfolder dipaparkan.
   function renderTree(node, isRoot = false) {
     const ul = document.createElement("ul");
     if (isRoot) ul.classList.add("root-tree");
@@ -141,7 +180,7 @@
       const typeA = node[a].__type;
       const typeB = node[b].__type;
       if (typeA !== typeB) return typeA === "folder" ? -1 : 1;
-      return a.localeCompare(b);
+      return a.localeCompare(b, undefined, { sensitivity: "base" });
     });
 
     keys.forEach(key => {
@@ -152,12 +191,14 @@
         const span = document.createElement("span");
         span.className = "folder-toggle";
         span.textContent = `📂 ${key}`;
-        
+        span.setAttribute("aria-expanded", "true");
+
         const childUl = renderTree(item.__children);
-        
+
         span.onclick = () => {
-          childUl.classList.toggle("hidden");
-          span.textContent = childUl.classList.contains("hidden") ? `📁 ${key}` : `📂 ${key}`;
+          const hidden = childUl.classList.toggle("hidden");
+          span.textContent = hidden ? `📁 ${key}` : `📂 ${key}`;
+          span.setAttribute("aria-expanded", String(!hidden));
         };
 
         li.appendChild(span);
@@ -165,9 +206,10 @@
       } else {
         const a = document.createElement("a");
         a.className = "file-link";
-        a.href = encodeURI(item.__path);
+        a.href = fileUrl(item.__path);
         a.textContent = `📄 ${key}`;
         a.target = "_blank";
+        a.rel = "noopener noreferrer";
         li.appendChild(a);
       }
 
